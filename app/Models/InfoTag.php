@@ -11,7 +11,7 @@ class InfoTag extends Model
     use HasFactory;
 
 	protected $fillable = ['nom', 'description'];
-	protected $table = "infoTags";
+	protected $table = "infotags";
     public function setNomAttribute($value)
 {
     if (is_array($value)) {

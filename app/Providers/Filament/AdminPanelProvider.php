@@ -30,8 +30,10 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => "#650F1C",
                 // 'primary' => Color::Amber,
-            ])
+                ])
+
             ->brandName('Dashboard CMP')
+
             // ->viteTheme('resources/css/filament/admin/theme.css')
             ->brandLogo(asset('assets/images/Logo-CMP-2023-red.png'))
             ->brandLogoHeight(fn() => auth()->check() ? '3rem' : '5rem')
