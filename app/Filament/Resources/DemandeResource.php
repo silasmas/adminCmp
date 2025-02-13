@@ -20,6 +20,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
+use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Columns\ColumnGroup;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -249,7 +250,14 @@ class DemandeResource extends Resource
                     ->searchable()
                     ->searchable(),
                 TextColumn::make('orateurs')
-                    ->label('Les orateurs')
+                    ->label('Orateurs')
+                    ->width('1%')
+                    ->wrap()
+                    ->listWithLineBreaks()
+                    ->badge()
+                    ->separator(','),
+                TextColumn::make('invites')
+                    ->label('Invités')
                     ->width('1%')
                     ->wrap()
                     ->listWithLineBreaks()
@@ -265,21 +273,20 @@ class DemandeResource extends Resource
                     ->sortable()
                     ->searchable(),
 
-
-
-                // TextColumn::make('orateurs')
-                //     ->label('Les orateurs')
-                //     ->formatStateUsing(fn($state) => implode(', ', json_decode($state ?? '[]', true)))
-                //     ->sortable()
-                //     ->searchable(),
             ])
             ->filters([
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
+                ActionGroup::make([
+                    // Tables\Actions\RestoreAction::make(),
+                    // Tables\Actions\DeleteAction::make(),
+                    // Tables\Actions\ForceDeleteAction::make(),
+
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
+            ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
