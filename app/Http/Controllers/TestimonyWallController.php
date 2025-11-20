@@ -22,7 +22,7 @@ class TestimonyWallController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
-        return view('wall.index', [
+        return view('pages.home', [
             'testimonies' => $approvedTestimonies,
         ]);
     }

@@ -2,16 +2,19 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\TestimonyResource\Pages;
-use App\Filament\Resources\TestimonyResource\RelationManagers\TestimonyImagesRelationManager;
-use App\Filament\Resources\TestimonyResource\RelationManagers\TestimonyAmensRelationManager;
-use App\Models\Testimony;
 use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Forms\Form;
+use App\Models\Testimony;
 use Filament\Tables\Table;
+use Filament\Resources\Resource;
+use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\SelectColumn;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Resources\TestimonyResource\Pages;
+use App\Filament\Resources\TestimonyResource\RelationManagers\TestimonyAmensRelationManager;
+use App\Filament\Resources\TestimonyResource\RelationManagers\TestimonyImagesRelationManager;
 
 class TestimonyResource extends Resource
 {
@@ -26,6 +29,7 @@ class TestimonyResource extends Resource
     protected static ?string $modelLabel = 'Témoignage';
 
     protected static ?int $navigationSort = 1;
+
 
     public static function form(Form $form): Form
     {
@@ -165,6 +169,34 @@ class TestimonyResource extends Resource
                     ->sortable()
                     ->toggleable()
                     ->size('sm'),
+ImageColumn::make('first_image')
+    ->label('Image')
+    ->getStateUsing(function ($record) {
+        // $record peut être null → on protège
+        if (! $record) {
+            return null;
+        }
+
+        $image = $record->images()->first();
+
+        return $image?->url;   // accessor url sur TestimonyImage
+    })
+    ->size(60) // taille de la vignette
+    ->circular(false)
+    ->extraImgAttributes(['class' => 'object-cover'])
+    ->url(function ($record) {
+        if (! $record) {
+            return null;
+        }
+
+        $image = $record->images()->first();
+
+        return $image?->url;
+    })
+    ->openUrlInNewTab()
+    ->visible(function ($record) {
+        return $record && $record->images()->exists();
+    }),
 
                 Tables\Columns\TextColumn::make('kind')
                     ->label('Type')
@@ -229,7 +261,22 @@ class TestimonyResource extends Resource
                         'gray'    => 'hidden',
                     ])
                     ->sortable(),
-
+SelectColumn::make('status')
+    ->label('Statut')
+    ->options([
+        'pending' => 'En attente',
+        'approved' => 'Approuvé',
+        'rejected' => 'Rejeté',
+        'hidden' => 'Caché',
+    ])
+    ->sortable()
+    ->rules(['required'])
+    ->selectablePlaceholder(false)
+    ->extraAttributes(['class' => 'text-xs'])
+    ->beforeStateUpdated(function ($record, $state) {
+        // Si tu veux loguer le changement ou envoyer une notif plus tard, c’est ici
+        // ex: activity()->on($record)->log("Statut changé en {$state}");
+    }),
                 Tables\Columns\TextColumn::make('verification_type')
                     ->label('Vérification')
                     ->badge()
@@ -274,12 +321,14 @@ class TestimonyResource extends Resource
                     }),
             ])
             ->actions([
+                ActionGroup::make([
                 Tables\Actions\ViewAction::make()
                     ->label('Voir'),
                 Tables\Actions\EditAction::make()
                     ->label('Modifier'),
                 Tables\Actions\DeleteAction::make()
                     ->label('Supprimer'),
+                    ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -300,10 +349,68 @@ class TestimonyResource extends Resource
     public static function getPages(): array
     {
         return [
+               
             'index' => Pages\ListTestimonies::route('/'),
             'create' => Pages\CreateTestimony::route('/create'),
             'edit' => Pages\EditTestimony::route('/{record}/edit'),
             'view' => Pages\ViewTestimony::route('/{record}'),
+               
         ];
     }
+    public static function infolist(Infolist $infolist): Infolist
+{
+    return $infolist
+        ->schema([
+            Section::make('Informations')
+                ->schema([
+                    TextEntry::make('first_name')->label('Prénom'),
+                    TextEntry::make('last_name')->label('Nom'),
+                    TextEntry::make('email')->label('Email'),
+                    TextEntry::make('phone')->label('Téléphone'),
+                    TextEntry::make('title')->label('Titre'),
+                    TextEntry::make('category')->label('Catégorie'),
+                    TextEntry::make('status')
+                        ->label('Statut')
+                        ->formatStateUsing(fn ($state) => match ($state) {
+                            'pending' => 'En attente',
+                            'approved' => 'Approuvé',
+                            'rejected' => 'Rejeté',
+                            'hidden' => 'Caché',
+                            default => $state,
+                        }),
+                    TextEntry::make('created_at')
+                        ->label('Créé le')
+                        ->dateTime('d/m/Y H:i'),
+                ])
+                ->columns(2),
+
+            Section::make('Texte du témoignage')
+                ->schema([
+                    TextEntry::make('text')
+                        ->label('Texte')
+                        ->hidden(fn ($record) => blank($record->text)),
+                ])
+                ->collapsible(),
+
+            Section::make('Images')
+                ->schema([
+                    ImageEntry::make('images')
+                        ->label('Images')
+                        ->getStateUsing(function (\App\Models\Testimony $record) {
+                            // On récupère un tableau d'URLs complètes
+                            return $record->images->pluck('url')->all();
+                        })
+                        ->columnSpanFull()
+                        ->grid(4)
+                        ->hidden(fn (\App\Models\Testimony $record) => $record->images->isEmpty()),
+                ]),
+
+            Section::make('Vidéo')
+                ->schema([
+                    ViewEntry::make('video_player')
+                        ->view('filament.testimonies.video-player')
+                        ->hidden(fn (\App\Models\Testimony $record) => blank($record->video)),
+                ]),
+        ]);
+}
 }
